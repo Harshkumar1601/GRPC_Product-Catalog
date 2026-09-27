@@ -1,0 +1,173 @@
+# Walkthrough - gRPC HTTP Gateway & Postman Integration
+
+We have successfully implemented the **gRPC HTTP Gateway reverse-proxy** for your inventory service. You can now make standard REST HTTP requests from **Postman**, web browsers, or any HTTP client, and the Gateway will translate them into gRPC calls sent to the Python backend server.
+
+---
+
+## 🛠️ Summary of Changes Made
+
+### 1. Protocol Buffers (`proto/`)
+- [inventory.proto](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/proto/inventory.proto): Added Google API HTTP annotations (`option (google.api.http)`) mapping REST URLs to gRPC RPC methods.
+- [annotations.proto](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/proto/google/api/annotations.proto) & [http.proto](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/proto/google/api/http.proto): Created Google API descriptor files for resolving HTTP option annotations.
+
+### 2. Python Backend (`server-python/`)
+- Updated protoc compilation command to generate `google/api/` stub dependencies alongside [inventory_pb2.py](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/server-python/inventory_pb2.py).
+- Improved error handling in [server.py](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/server-python/server.py).
+
+### 3. Node.js HTTP Gateway (`gateway-node/`)
+- Created [gateway.js](file:///d:/B.Tech%201st%20year/Sem-7/MAP/GRPC/gateway-node/gateway.js): An Express-based reverse proxy running on `http://localhost:8080`.
+- Receives HTTP REST requests from clients (Postman/Browser) and translates them into binary gRPC calls to the Python backend (`localhost:50053`).
+
+---
+
+## 🚀 How to Run the System
+
+Open **2 terminals**:
+
+### Terminal 1: Start Python gRPC Backend
+```powershell
+# 1. Compile proto files for Python
+.\server-python\.venv\Scripts\python -m grpc_tools.protoc -Iproto --python_out=server-python --grpc_python_out=server-python proto/google/api/http.proto proto/google/api/annotations.proto proto/inventory.proto
+
+# 2. Run the Python gRPC Server (listening on 50053)
+.\server-python\.venv\Scripts\python server-python/server.py
+```
+
+### Terminal 2: Start Node.js HTTP Gateway
+```powershell
+# Run the Gateway Server (listening on 8080)
+node gateway-node/gateway.js
+```
+
+---
+
+## 📬 Postman Testing Guide
+
+Open **Postman** and test the following endpoints against `http://localhost:8080`:
+
+### 1. List All Products
+- **HTTP Method**: `GET`
+- **URL**: `http://localhost:8080/v1/products`
+- **Response**:
+```json
+{
+  "success": true,
+  "total": 3,
+  "products": [
+    {
+      "id": "prod-1",
+      "name": "Laptop",
+      "description": "High performance developer laptop",
+      "price": 1299.99,
+      "stock": 10
+    },
+    ...
+  ]
+}
+```
+
+---
+
+### 2. Get Single Product by ID
+- **HTTP Method**: `GET`
+- **URL**: `http://localhost:8080/v1/products/prod-1`
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Product retrieved successfully.",
+  "product": {
+    "id": "prod-1",
+    "name": "Laptop",
+    "description": "High performance developer laptop",
+    "price": 1299.99,
+    "stock": 10
+  }
+}
+```
+
+---
+
+### 3. Add a New Product
+- **HTTP Method**: `POST`
+- **URL**: `http://localhost:8080/v1/products`
+- **Headers**: `Content-Type: application/json`
+- **Body** (`raw` -> `JSON`):
+```json
+{
+  "id": "prod-4",
+  "name": "Mechanical Keyboard",
+  "description": "RGB Mechanical Keyboard",
+  "price": 89.99,
+  "stock": 25
+}
+```
+- **Response** (`201 Created`):
+```json
+{
+  "success": true,
+  "message": "Product added successfully.",
+  "product": {
+    "id": "prod-4",
+    "name": "Mechanical Keyboard",
+    "description": "RGB Mechanical Keyboard",
+    "price": 89.99,
+    "stock": 25
+  }
+}
+```
+
+---
+
+### 4. Update an Existing Product
+- **HTTP Method**: `PUT`
+- **URL**: `http://localhost:8080/v1/products`
+- **Headers**: `Content-Type: application/json`
+- **Body** (`raw` -> `JSON`):
+```json
+{
+  "id": "prod-4",
+  "name": "Mechanical Keyboard Pro",
+  "description": "RGB Wireless Mechanical Keyboard",
+  "price": 109.99,
+  "stock": 30
+}
+```
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Product updated successfully.",
+  "product": {
+    "id": "prod-4",
+    "name": "Mechanical Keyboard Pro",
+    "description": "RGB Wireless Mechanical Keyboard",
+    "price": 109.99,
+    "stock": 30
+  }
+}
+```
+
+---
+
+### 5. Delete a Product by ID
+- **HTTP Method**: `DELETE`
+- **URL**: `http://localhost:8080/v1/products/prod-4`
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "Product with ID 'prod-4' deleted successfully."
+}
+```
+
+---
+
+## 🔍 Verification Results
+
+All 5 REST endpoints were tested programmatically against the running Python gRPC server via the Node Gateway and verified to work correctly:
+- ✅ `GET /v1/products` (Server streaming gRPC -> HTTP JSON list)
+- ✅ `GET /v1/products/prod-1` (Unary gRPC -> HTTP JSON object)
+- ✅ `POST /v1/products` (HTTP JSON -> Unary gRPC AddProduct)
+- ✅ `PUT /v1/products` (HTTP JSON -> Unary gRPC UpdateProduct)
+- ✅ `DELETE /v1/products/prod-4` (HTTP JSON -> Unary gRPC DeleteProduct)

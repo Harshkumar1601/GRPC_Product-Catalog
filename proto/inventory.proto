@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package inventory;
+
+import "google/api/annotations.proto";
+
+// The inventory management service definition.
+service InventoryService {
+    // Unary RPC: Add a new product to the inventory
+    rpc AddProduct (Product) returns (ProductResponse) {
+        option (google.api.http) = {
+            post: "/v1/products"
+            body: "*"
+        };
+    }
+
+    // Unary RPC: Retrieve a product's details by ID
+    rpc GetProduct (ProductRequest) returns (ProductResponse) {
+        option (google.api.http) = {
+            get: "/v1/products/{id}"
+        };
+    }
+
+    // Unary RPC: Update an existing product's details
+    rpc UpdateProduct (Product) returns (ProductResponse) {
+        option (google.api.http) = {
+            put: "/v1/products"
+            body: "*"
+        };
+    }
+
+    // Unary RPC: Delete a product from inventory by ID
+    rpc DeleteProduct (ProductRequest) returns (DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/v1/products/{id}"
+        };
+    }
+
+    // Server Streaming RPC: Retrieve all products in inventory as a stream
+    rpc ListProducts (Empty) returns (stream Product) {
+        option (google.api.http) = {
+            get: "/v1/products"
+        };
+    }
+}
+
+// Request message representing an empty payload
+message Empty {}
+
+// Representation of a Product in the inventory
+message Product {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    double price = 4;
+    int32 stock = 5;
+}
+
+// Request message to query or delete a product by ID
+message ProductRequest {
+    string id = 1;
+}
+
+// Response message for unary operations involving a single product
+message ProductResponse {
+    bool success = 1;
+    string message = 2;
+    Product product = 3;
+}
+
+// Response message for a delete operation
+message DeleteResponse {
+    bool success = 1;
+    string message = 2;
+}
